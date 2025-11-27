@@ -7,12 +7,17 @@ struct StepView: View {
     @Environment(\.openURL) private var openURL
     @State private var showShare = false
 
+
+    @AppStorage("focus_time_minutes") private var focusTimeMinutes: Int = 25
+    @AppStorage("pause_time_minutes") private var pauseTimeMinutes: Int = 15
+    @AppStorage("rest_time_minutes") private var restTimeMinutes: Int = 45
+
     @State private var isRunning = false
-    @State private var remainingSeconds: Int = 25 * 60
+    @State private var remainingSeconds: Int = 0
     @State private var timer: Timer?
     @State private var isPaused = false
     @State private var isRest = false
-    @State private var totalDurationSeconds: Int = 25 * 60
+    @State private var totalDurationSeconds: Int = 0
 
     @Environment(\.scenePhase) private var scenePhase
     @State private var sessionStartDate: Date?
@@ -44,7 +49,7 @@ struct StepView: View {
             content.body = "Time to get back to work."
         } else {
             content.title = "Work session finished"
-            content.body = "Take a 5‑minute break."
+            content.body = "Take a \(pauseTimeMinutes)-minute break."
         }
         content.sound = .default
 
@@ -91,14 +96,12 @@ struct StepView: View {
         totalDurationSeconds =
             remaining > 0
             ? Int(endDate.timeIntervalSince(sessionStartDate ?? now))
-            : (isRest ? 5 * 60 : 25 * 60)
+            : (isRest ? pauseTimeMinutes * 60 : focusTimeMinutes * 60)
         remainingSeconds = remaining
         if remaining > 0 {
             isRunning = true
-
             startForegroundTicking()
         } else {
-
             if isRest {
                 stopAll(resetToStart: true)
             } else {
@@ -116,7 +119,6 @@ struct StepView: View {
                 let remaining = Int(max(0, end.timeIntervalSince(now)))
                 remainingSeconds = remaining
                 if remaining == 0 {
-
                     if isRest {
                         stopAll(resetToStart: true)
                     } else {
@@ -133,7 +135,7 @@ struct StepView: View {
         isPaused = false
         if isRunning { return }
         isRunning = true
-        totalDurationSeconds = 25 * 60
+        totalDurationSeconds = focusTimeMinutes * 60
         remainingSeconds = totalDurationSeconds
         sessionStartDate = Date()
         sessionEndDate = sessionStartDate!.addingTimeInterval(
@@ -169,13 +171,11 @@ struct StepView: View {
         timer?.invalidate()
         timer = nil
         if resetToStart {
-
             isPaused = false
             isRest = false
-            totalDurationSeconds = 25 * 60
+            totalDurationSeconds = focusTimeMinutes * 60
             remainingSeconds = totalDurationSeconds
         } else {
-
             isPaused = true
         }
         sessionStartDate = nil
@@ -204,7 +204,6 @@ struct StepView: View {
                             .foregroundColor(.white)
                     }
                     Spacer()
-
                 }
                 .padding(.horizontal, 30)
                 .padding(.top, 8)
@@ -235,7 +234,7 @@ struct StepView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         benefitItem(
                             rest:
-                                "Set the timer for 25 minutes and work all this time"
+                                "Set the timer for \(focusTimeMinutes) minutes and work all this time"
                         )
                         benefitItem(
                             rest: "If you want, you can stop the timer."
@@ -264,7 +263,10 @@ struct StepView: View {
                         .padding(.horizontal, 30)
                     } else {
                         VStack(alignment: .leading, spacing: 6) {
-                            benefitItem(rest: "Take a break for 5 minutes")
+                            benefitItem(
+                                rest:
+                                    "Take a break for \(pauseTimeMinutes) minutes"
+                            )
                             benefitItem(
                                 rest:
                                     "When you're ready to start breakup, start the timer."
@@ -289,16 +291,15 @@ struct StepView: View {
                         if isRest {
                             stopAll(resetToStart: true)
                             onFinish()
-
                         } else {
                             stopAll()
                         }
                     } else {
                         if isPaused {
-
-                            startRest(minutes: 5)
+                         
+                            startRest(minutes: pauseTimeMinutes)
                         } else {
-
+                         
                             startWork()
                         }
                     }
@@ -308,30 +309,31 @@ struct StepView: View {
                             isRunning
                                 ? "Stop"
                                 : (isPaused
-                                    ? "Сontinue\n(Take a break for 5 minutes)"
+                                    ? "Сontinue\n(Take a break for \(pauseTimeMinutes) minutes)"
                                     : "Start")
                         )
                         .montserrat(.medium, 16)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
-
                         .padding(.horizontal, 20)
                     }
-
                     .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(BtnStyle())
                 .padding(.horizontal)
 
                 Button(action: {
-                    startRest(minutes: 30)
+                
+                    startRest(minutes: restTimeMinutes)
                 }) {
                     ZStack {
-                        Text("The task is completed\n(Take a 30 minutes break)")
-                            .montserrat(.medium, 16)
-                            .multilineTextAlignment(.center)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.horizontal, 20)
+                        Text(
+                            "The task is completed\n(Take a \(restTimeMinutes) minutes break)"
+                        )
+                        .montserrat(.medium, 16)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 20)
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -346,7 +348,6 @@ struct StepView: View {
         }
         .background(
             ZStack {
-
                 Color.black
                     .ignoresSafeArea()
                 Image("app_bg_main")
@@ -357,6 +358,9 @@ struct StepView: View {
         )
         .onAppear {
             requestNotificationPermission()
+          
+            totalDurationSeconds = focusTimeMinutes * 60
+            remainingSeconds = totalDurationSeconds
             restoreSessionStateIfNeeded()
         }
         .onChange(of: scenePhase) { _, newPhase in
@@ -369,7 +373,6 @@ struct StepView: View {
                 break
             }
         }
-
     }
 
     @ViewBuilder
@@ -397,7 +400,6 @@ struct TimerCircleView: View {
     var body: some View {
         ZStack {
             if isRunning {
-
                 Circle()
                     .stroke(Color(hex: "162C80"), lineWidth: 10)
 
@@ -411,7 +413,6 @@ struct TimerCircleView: View {
                         )
                     )
                     .rotationEffect(.degrees(-90))
-
             }
 
             Image("app_bg_timer")
@@ -425,6 +426,7 @@ struct TimerCircleView: View {
         )
     }
 }
+
 #Preview {
     StepView()
 }
