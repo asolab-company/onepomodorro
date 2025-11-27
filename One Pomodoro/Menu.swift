@@ -4,7 +4,8 @@ struct Menu: View {
 
     var onSettings: () -> Void = {}
     var onStart: () -> Void = {}
-
+    @State private var showSetTime = false
+    
     var body: some View {
         ZStack {
 
@@ -82,6 +83,27 @@ struct Menu: View {
                     }
                     .buttonStyle(BtnStyle())
                     .padding(.bottom, 8)
+                    
+                    Button(action: {
+                        showSetTime = true
+                    }) {
+                        ZStack {
+                            Text("Set my pomodoro time")
+                                .montserrat(.medium, 16)
+                            HStack {
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(
+                                        .system(size: 18, weight: .bold)
+                                    )
+                            }
+                            .padding(.horizontal, 20)
+                        }
+                        .padding(.vertical, 12)
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(BtnStyle())
+                    .padding(.bottom, 40)
 
                     Spacer()
 
@@ -111,6 +133,9 @@ struct Menu: View {
                     .ignoresSafeArea(.all)
             }
         )
+        .fullScreenCover(isPresented: $showSetTime) {
+                  SetTime()
+              }
 
     }
 
